@@ -33,3 +33,5 @@ backend/.env
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+backend/node
+backend/battle-ship-backend@1.0.0

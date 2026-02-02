@@ -50,7 +50,8 @@ export interface GameContextValue {
 
 const GameContext = createContext<GameContextValue | undefined>(undefined);
 
-const BACKEND_URL = "http://localhost:4000";
+/* CAMBIO CLAVE: URL DEL BACKEND ONLINE */
+const BACKEND_URL = "https://battle-ship-online.onrender.com";
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [screen, setScreen] = useState<Screen>("home");
@@ -66,32 +67,32 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [myPlacement, setMyPlacement] = useState<ShipPlacement[] | null>(null);
   const [finalMyShots, setFinalMyShotsState] = useState(0);
   const [finalOpponentShots, setFinalOpponentShotsState] = useState(0);
+
   const setFinalShots = useCallback((my: number, opponent: number) => {
     setFinalMyShotsState(my);
     setFinalOpponentShotsState(opponent);
   }, []);
 
   useEffect(() => {
-    const s = io(BACKEND_URL, { 
+    const s = io(BACKEND_URL, {
       autoConnect: true,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5
     });
+
     setSocket(s);
-    
-    // Set playerId when socket connects
+
     s.on("connect", () => {
       if (s.id) {
         setPlayerId(s.id);
       }
     });
-    
-    // Handle connection errors gracefully
+
     s.on("connect_error", (error) => {
       console.warn("Socket connection error:", error);
     });
-    
+
     return () => {
       s.disconnect();
     };
@@ -110,10 +111,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Private room: when second player joins, BOTH go to placement (symmetric flow)
     socket.on("room:ready", ({ roomCode, players }) => {
       setScreen("placement");
       setRoomCode(roomCode);
+
       const currentPlayerId = socket.id;
       if (currentPlayerId && players[currentPlayerId]) {
         setPlayerId(currentPlayerId);
@@ -126,6 +127,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMatchmaking(false);
       setScreen("placement");
       setRoomCode(roomCode);
+
       const currentPlayerId = socket.id;
       if (currentPlayerId && players[currentPlayerId]) {
         setPlayerId(currentPlayerId);
@@ -231,4 +233,3 @@ export function useGame() {
   }
   return ctx;
 }
-
