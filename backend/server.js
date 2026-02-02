@@ -6,18 +6,21 @@ import { createRoom, joinRoom, attachMatchRoom, getRoom, handleShipPlacement, ha
 import { enqueuePlayer, removeFromQueue, tryMatch } from "./matchmaking.js";
 
 const PORT = process.env.PORT || 4000;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 const app = express();
-app.use(cors({ origin: CLIENT_ORIGIN }));
+
+// CORS totalmente abierto para evitar bloqueos entre Vercel y Render
+app.use(cors());
+
 app.get("/", (_req, res) => {
   res.json({ status: "ok", message: "Battle Ship backend running" });
 });
 
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: CLIENT_ORIGIN
+    origin: "*"
   }
 });
 
