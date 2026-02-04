@@ -104,12 +104,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     socket.on("room:playersUpdate", ({ players }) => {
       const currentPlayerId = socket.id || playerId;
       if (currentPlayerId) {
-        const opponentEntry = Object.values(players).find((p: any) => p.id !== currentPlayerId);
+        const opponentEntry = Object.values(players).find(
+          (p: any) => p.id !== currentPlayerId
+        ) as { id: string; name: string } | undefined;
+    
         if (opponentEntry) {
           setOpponentName(opponentEntry.name);
         }
       }
     });
+    
 
     socket.on("room:ready", ({ roomCode, players }) => {
       setScreen("placement");
