@@ -1,8 +1,8 @@
 import React from "react";
 import type { SinkingAnimation } from "../../types/game";
+import { COLORS } from "../../theme/colors";
 
-type CellStatus = "unknown" | "ship" | "hit" | "miss" | "sunk";
-
+export type CellStatus = "empty" | "ship" | "hit" | "miss" | "sunk";
 interface BoardGridProps {
   title: string;
   mode: "attack" | "defense";
@@ -34,7 +34,12 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
   return (
     <div className="space-y-3 w-full max-w-[min(100%,20rem)]">
       <div className="text-center">
-        <span className="text-sm font-medium text-text-main/80 uppercase tracking-wide">{title}</span>
+        <span
+          className="text-sm font-medium uppercase tracking-wide"
+          style={{ color: COLORS.DARK_GREEN }}
+        >
+          {title}
+        </span>
       </div>
       <div>
         {/* Independent letters row: same total width as board, does NOT affect board layout */}
@@ -44,7 +49,8 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
             {COL_LABELS.slice(0, BOARD_SIZE).map((letter) => (
               <div
                 key={letter}
-                className="flex items-center justify-center text-xs font-medium text-text-main/80"
+                className="flex items-center justify-center text-xs font-medium"
+                style={{ color: COLORS.DARK_GREEN }}
               >
                 {letter}
               </div>
@@ -57,13 +63,17 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
             {ROW_LABELS.slice(0, BOARD_SIZE).map((num) => (
               <div
                 key={num}
-                className="h-7 flex items-center justify-center text-xs font-medium text-text-main/80"
+                className="h-7 flex items-center justify-center text-xs font-medium"
+                style={{ color: COLORS.DARK_GREEN }}
               >
                 {num}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-10 grid-rows-10 border border-grid-deep/20 rounded-lg overflow-hidden bg-grid-deep/5 flex-1 min-w-0">
+          <div
+            className="grid grid-cols-10 grid-rows-10 border rounded-lg overflow-hidden bg-grid-deep/5 flex-1 min-w-0"
+            style={{ borderColor: COLORS.DARK_GREEN }}
+          >
             {Array.from({ length: BOARD_SIZE * BOARD_SIZE }).map((_, idx) => {
               const x = idx % BOARD_SIZE;
               const y = Math.floor(idx / BOARD_SIZE);
@@ -74,7 +84,7 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
               const hasShip = cell === "ship";
               const isSinkingCell = cellInSet(x, y, sinkingCells);
 
-              const common = "relative flex items-center justify-center w-7 h-7 flex-shrink-0 transition-all duration-200 border border-grid-deep/20";
+              const common = "relative flex items-center justify-center w-7 h-7 flex-shrink-0 transition-all duration-200 border";
 
               let stateClasses = "";
               if (isSinkingCell && sinkingPhase === "fire") {
@@ -89,7 +99,7 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
                 } else if (isMiss) {
                   stateClasses = "bg-grid-deep/20 border-grid-deep/30";
                 } else if (hasShip) {
-                  stateClasses = "bg-accent-secondary/60 border-accent-secondary/50";
+                  stateClasses = "bg-background/90";
                 } else {
                   stateClasses = "bg-background/90";
                 }
@@ -107,11 +117,29 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
                 }
               }
 
+              const inlineStyle: React.CSSProperties = {
+                // Use same DARK_GREEN tone but with low opacity for softer grid lines
+                borderColor: "rgba(30, 61, 47, 0.25)"
+              };
+
+              if (
+                isOwnBoard &&
+                hasShip &&
+                !isSunk &&
+                !isHit &&
+                !isMiss &&
+                !isSinkingCell
+              ) {
+                inlineStyle.backgroundColor = COLORS.ORANGE;
+                inlineStyle.borderColor = COLORS.ORANGE;
+              }
+
               return (
                 <button
                   key={idx}
                   type="button"
                   className={`${common} ${stateClasses}`}
+                  style={inlineStyle}
                   onClick={
                     disabled || !onCellClick
                       ? undefined

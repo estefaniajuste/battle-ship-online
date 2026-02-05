@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useGame, ShipPlacement as ShipPlacementType, ShipOrientation } from "../../state/GameContext";
 import { placeShips } from "../../services/gameApi";
+import { COLORS } from "../../theme/colors";
 
 type ShipDef = { id: string; size: number; label: string; shape?: "L" };
 
@@ -421,7 +422,10 @@ export const ShipPlacementScreen: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-text-main flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-8">
-        <h1 className="text-xl font-semibold text-text-main tracking-wide">
+        <h1
+          className="text-xl font-semibold tracking-wide"
+          style={{ color: COLORS.DARK_GREEN }}
+        >
           Place your fleet
         </h1>
 
@@ -431,7 +435,8 @@ export const ShipPlacementScreen: React.FC = () => {
             {COL_LABELS.map((letter) => (
               <div
                 key={letter}
-                className="w-7 h-6 flex items-center justify-center text-xs font-medium text-text-main/80 flex-shrink-0"
+                className="w-7 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0"
+                style={{ color: COLORS.DARK_GREEN }}
               >
                 {letter}
               </div>
@@ -442,14 +447,16 @@ export const ShipPlacementScreen: React.FC = () => {
               {ROW_LABELS.map((num) => (
                 <div
                   key={num}
-                  className="h-7 flex items-center justify-center text-xs font-medium text-text-main/80"
+                  className="h-7 flex items-center justify-center text-xs font-medium"
+                  style={{ color: COLORS.DARK_GREEN }}
                 >
                   {num}
                 </div>
               ))}
             </div>
             <div
-              className="grid grid-cols-10 grid-rows-10 border border-grid-deep/30 rounded-lg overflow-hidden bg-grid-deep/10"
+              className="grid grid-cols-10 grid-rows-10 border rounded-lg overflow-hidden bg-grid-deep/10"
+              style={{ borderColor: COLORS.DARK_GREEN }}
               onMouseLeave={() => setHoverCell(null)}
               onMouseMove={handleCellMouseMove}
             >
@@ -470,7 +477,7 @@ export const ShipPlacementScreen: React.FC = () => {
                     onMouseDown={() => handleCellMouseDown(x, y)}
                     onMouseUp={() => handleCellMouseUp(x, y)}
                     onMouseEnter={() => !isLocked && setHoverCell({ x, y })}
-                    className={`w-7 h-7 flex-shrink-0 border border-grid-deep/20 transition-colors select-none ${
+                    className={`w-7 h-7 flex-shrink-0 border transition-colors select-none ${
                       isLocked ? "cursor-default" : "cursor-pointer hover:ring-1 hover:ring-accent-primary/50 hover:ring-inset"
                     } ${
                       previewValid
@@ -482,9 +489,16 @@ export const ShipPlacementScreen: React.FC = () => {
                         : active
                         ? "bg-accent-primary/25 border-accent-primary/60"
                         : occupied
-                        ? "bg-accent-secondary/70 border-accent-secondary/50"
+                        ? "bg-background/90"
                         : "bg-background/90"
                     }`}
+                    style={{
+                      // Softer inner grid lines: same DARK_GREEN tone with low opacity
+                      borderColor: "rgba(30, 61, 47, 0.25)",
+                      backgroundColor: occupied && !previewValid && !previewInvalid && !invalidPlaced && !active
+                        ? COLORS.ORANGE
+                        : undefined
+                    }}
                   />
                 );
               })}
@@ -494,14 +508,18 @@ export const ShipPlacementScreen: React.FC = () => {
 
         <div className="w-full max-w-sm space-y-2">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-text-main/70">
+            <span
+              className="text-xs font-medium uppercase tracking-wide"
+              style={{ color: COLORS.DARK_GREEN }}
+            >
               Fleet
             </span>
             {!isLocked && (
               <button
                 type="button"
                 onClick={handleRotate}
-                className="text-xs rounded-full border border-grid-deep/20 px-3 py-1.5 text-text-main/70 hover:bg-grid-deep/10 transition-colors"
+                className="text-xs rounded-full border px-3 py-1.5 hover:bg-grid-deep/10 transition-colors"
+                style={{ borderColor: COLORS.DARK_GREEN, color: COLORS.DARK_GREEN }}
               >
                 Rotate current
               </button>
@@ -546,11 +564,15 @@ export const ShipPlacementScreen: React.FC = () => {
                         <span
                           key={idx}
                           className={`w-2 h-2 rounded-sm flex-shrink-0 ${
-                            rotationRejected ? "bg-red-500" : isCurrentInSequence ? "bg-accent-primary" : "bg-accent-secondary/90"
+                            rotationRejected ? "bg-red-500" : isCurrentInSequence ? "bg-accent-primary" : ""
                           }`}
                           style={{
                             gridColumn: dx + 1,
-                            gridRow: dy + 1
+                            gridRow: dy + 1,
+                            backgroundColor:
+                              rotationRejected || isCurrentInSequence
+                                ? undefined
+                                : COLORS.ORANGE
                           }}
                         />
                       ))}
@@ -565,8 +587,14 @@ export const ShipPlacementScreen: React.FC = () => {
                         <span
                           key={idx}
                           className={`w-2.5 h-2 rounded-sm flex-shrink-0 ${
-                            rotationRejected ? "bg-red-500" : isCurrentInSequence ? "bg-accent-primary" : "bg-accent-secondary/90"
+                            rotationRejected ? "bg-red-500" : isCurrentInSequence ? "bg-accent-primary" : ""
                           }`}
+                          style={{
+                            backgroundColor:
+                              rotationRejected || isCurrentInSequence
+                                ? undefined
+                                : COLORS.ORANGE
+                          }}
                         />
                       ))}
                     </span>

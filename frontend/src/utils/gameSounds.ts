@@ -6,9 +6,9 @@
  */
 
 const SOUND_URLS = {
-  explosion: "/sounds/explosion.wav",
-  waterSplash: "/sounds/water-splash.wav",
-  shipSunk: "/sounds/ship-sunk.wav"
+  explosion: "/sounds/hit.mp3",
+  waterSplash: "/sounds/miss.mp3",
+  shipSunk: "/sounds/sunk.mp3"
 } as const;
 
 // Volume: explosion louder and more intense; water softer and pleasant

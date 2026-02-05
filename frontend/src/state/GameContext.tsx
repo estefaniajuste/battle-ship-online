@@ -51,7 +51,7 @@ export interface GameContextValue {
 const GameContext = createContext<GameContextValue | undefined>(undefined);
 
 /* CAMBIO CLAVE: URL DEL BACKEND ONLINE */
-const BACKEND_URL = "https://battle-ship-online.onrender.com";
+const BACKEND_URL = "http://localhost:4000";
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [screen, setScreen] = useState<Screen>("home");
