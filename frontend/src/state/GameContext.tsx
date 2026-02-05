@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
+import { useAuth } from "./AuthContext";
 
 export type Screen =
   | "home"
@@ -7,9 +8,15 @@ export type Screen =
   | "placement"
   | "game"
   | "result"
+  | "ai_placement"
+  | "ai_game"
+  | "ai_result"
   | "login"
   | "register"
-  | "profile";
+  | "profile"
+  | "history"
+  | "stats"
+  | "leaderboard";
 
 export type ResultType = "win" | "lose" | null;
 
@@ -30,6 +37,8 @@ export interface GameContextValue {
   setScreen: (s: Screen) => void;
   playerName: string;
   setPlayerName: (name: string) => void;
+  /** Display name for sockets: authenticated user's username or playerName or "Player" */
+  effectivePlayerName: string;
   roomCode: string | null;
   setRoomCode: (code: string | null) => void;
   playerId: string | null;
@@ -49,6 +58,31 @@ export interface GameContextValue {
   finalMyShots: number;
   finalOpponentShots: number;
   setFinalShots: (my: number, opponent: number) => void;
+  /** AI game: screen is one of ai_placement | ai_game | ai_result */
+  isAIGame: boolean;
+  /** AI's ship placement (internal); used to resolve hit/miss/sunk when player fires */
+  aiShipPlacement: ShipPlacement[] | null;
+  setAiShipPlacement: (p: ShipPlacement[] | null) => void;
+  /** Player's view when attacking AI: empty | hit | miss | sunk (no "ship" shown) */
+  aiBoard: BoardCellState[][];
+  setAiBoard: React.Dispatch<React.SetStateAction<BoardCellState[][]>>;
+  /** Player's board that AI attacks: ship | empty | hit | miss | sunk */
+  playerBoardState: BoardCellState[][];
+  setPlayerBoardState: React.Dispatch<React.SetStateAction<BoardCellState[][]>>;
+  /** Cells the AI has already shot at */
+  aiShots: Array<{ x: number; y: number }>;
+  setAiShots: React.Dispatch<React.SetStateAction<Array<{ x: number; y: number }>>>;
+  aiMyShots: number;
+  aiOpponentShots: number;
+  setAiMyShots: (n: number) => void;
+  setAiOpponentShots: (n: number) => void;
+  /** Set when AI game ends: "win" | "lose" */
+  aiResult: "win" | "lose" | null;
+  setAiResult: (r: "win" | "lose" | null) => void;
+  /** Initialize and start AI game; initialPlayerBoard is 10x10 with "ship" | "empty" */
+  startAIGame: (aiPlacement: ShipPlacement[], initialPlayerBoard: BoardCellState[][]) => void;
+  /** Clear AI state and optionally go home */
+  resetAIGame: () => void;
 }
 
 const GameContext = createContext<GameContextValue | undefined>(undefined);
@@ -59,9 +93,11 @@ const BACKEND_URL =
 
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, token } = useAuth();
   const [screen, setScreen] = useState<Screen>("home");
   const [playerName, setPlayerName] = useState("");
   const [roomCode, setRoomCode] = useState<string | null>(null);
+  const effectivePlayerName = user?.username || playerName || "Player";
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [result, setResult] = useState<ResultType>(null);
@@ -72,6 +108,50 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [myPlacement, setMyPlacement] = useState<ShipPlacement[] | null>(null);
   const [finalMyShots, setFinalMyShotsState] = useState(0);
   const [finalOpponentShots, setFinalOpponentShotsState] = useState(0);
+
+  const [aiShipPlacement, setAiShipPlacement] = useState<ShipPlacement[] | null>(null);
+  const [aiBoard, setAiBoard] = useState<BoardCellState[][]>(() =>
+    Array.from({ length: 10 }, () => Array(10).fill("empty" as BoardCellState))
+  );
+  const [playerBoardState, setPlayerBoardState] = useState<BoardCellState[][]>(() =>
+    Array.from({ length: 10 }, () => Array(10).fill("empty" as BoardCellState))
+  );
+  const [aiShots, setAiShots] = useState<Array<{ x: number; y: number }>>([]);
+  const [aiMyShots, setAiMyShotsState] = useState(0);
+  const [aiOpponentShots, setAiOpponentShotsState] = useState(0);
+  const [aiResult, setAiResult] = useState<"win" | "lose" | null>(null);
+
+  const myShotsInGameRef = useRef(0);
+  const opponentShotsInGameRef = useRef(0);
+
+  const isAIGame = screen === "ai_placement" || screen === "ai_game" || screen === "ai_result";
+
+  const setAiMyShots = useCallback((n: number) => setAiMyShotsState(n), []);
+  const setAiOpponentShots = useCallback((n: number) => setAiOpponentShotsState(n), []);
+
+  const startAIGame = useCallback(
+    (aiPlacement: ShipPlacement[], initialPlayerBoard: BoardCellState[][]) => {
+      setAiShipPlacement(aiPlacement);
+      setAiBoard(Array.from({ length: 10 }, () => Array(10).fill("empty" as BoardCellState)));
+      setAiShots([]);
+      setAiMyShotsState(0);
+      setAiOpponentShotsState(0);
+      setAiResult(null);
+      setPlayerBoardState(initialPlayerBoard.map((row) => [...row]));
+      setScreen("ai_game");
+    },
+    []
+  );
+
+  const resetAIGame = useCallback(() => {
+    setAiShipPlacement(null);
+    setAiBoard(Array.from({ length: 10 }, () => Array(10).fill("empty" as BoardCellState)));
+    setPlayerBoardState(Array.from({ length: 10 }, () => Array(10).fill("empty" as BoardCellState)));
+    setAiShots([]);
+    setAiMyShotsState(0);
+    setAiOpponentShotsState(0);
+    setAiResult(null);
+  }, []);
 
   const setFinalShots = useCallback((my: number, opponent: number) => {
     setFinalMyShotsState(my);
@@ -150,16 +230,52 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     socket.on("game:started", ({ currentTurn }) => {
       setCurrentTurnId(currentTurn);
+      myShotsInGameRef.current = 0;
+      opponentShotsInGameRef.current = 0;
       setScreen("game");
     });
 
-    socket.on("game:shotResult", ({ currentTurn }: { currentTurn?: string | null }) => {
+    socket.on("game:shotResult", ({ currentTurn, attackerId }: { currentTurn?: string | null; attackerId?: string }) => {
       if (currentTurn != null) setCurrentTurnId(currentTurn);
+      if (attackerId && playerId) {
+        if (attackerId === playerId) {
+          myShotsInGameRef.current += 1;
+        } else {
+          opponentShotsInGameRef.current += 1;
+        }
+      }
     });
 
     socket.on("game:over", ({ winnerId }) => {
       if (playerId && winnerId) {
-        setResult(winnerId === playerId ? "win" : "lose");
+        const resultValue = winnerId === playerId ? "win" : "lose";
+        const myShots = myShotsInGameRef.current;
+        const opponentShots = opponentShotsInGameRef.current;
+        setResult(resultValue);
+        setFinalMyShotsState(myShots);
+        setFinalOpponentShotsState(opponentShots);
+
+        if (token) {
+          (async () => {
+            try {
+              await fetch(`${BACKEND_URL}/api/games`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  result: resultValue,
+                  myShots,
+                  opponentShots
+                })
+              });
+            } catch {
+              // Do not block UI; save failure is silent
+            }
+          })();
+        }
+
         setScreen("result");
       }
     });
@@ -174,6 +290,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMyPlacement(null);
       setFinalMyShotsState(0);
       setFinalOpponentShotsState(0);
+      myShotsInGameRef.current = 0;
+      opponentShotsInGameRef.current = 0;
     });
 
     return () => {
@@ -186,7 +304,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       socket.removeAllListeners("game:over");
       socket.removeAllListeners("room:opponentLeft");
     };
-  }, [socket, playerId]);
+  }, [socket, playerId, token]);
 
   const value = useMemo<GameContextValue>(
     () => ({
@@ -194,6 +312,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setScreen,
       playerName,
       setPlayerName,
+      effectivePlayerName,
       roomCode,
       setRoomCode,
       playerId,
@@ -212,11 +331,29 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMyPlacement,
       finalMyShots,
       finalOpponentShots,
-      setFinalShots
+      setFinalShots,
+      isAIGame,
+      aiShipPlacement,
+      setAiShipPlacement,
+      aiBoard,
+      setAiBoard,
+      playerBoardState,
+      setPlayerBoardState,
+      aiShots,
+      setAiShots,
+      aiMyShots,
+      aiOpponentShots,
+      setAiMyShots,
+      setAiOpponentShots,
+      aiResult,
+      setAiResult,
+      startAIGame,
+      resetAIGame
     }),
     [
       screen,
       playerName,
+      effectivePlayerName,
       roomCode,
       playerId,
       opponentName,
@@ -227,7 +364,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       playersReady,
       myPlacement,
       finalMyShots,
-      finalOpponentShots
+      finalOpponentShots,
+      aiShipPlacement,
+      aiBoard,
+      playerBoardState,
+      aiShots,
+      aiMyShots,
+      aiOpponentShots,
+      aiResult
     ]
   );
 

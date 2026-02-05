@@ -3,6 +3,7 @@ import { MainLayout } from "../layout/MainLayout";
 import { Button } from "../ui/Button";
 import { useGame } from "../../state/GameContext";
 import { leaveRoom } from "../../services/gameApi";
+import { GAME_COLORS } from "../../theme/gameColors";
 
 export const GameResultScreen: React.FC = () => {
   const {
@@ -39,9 +40,8 @@ export const GameResultScreen: React.FC = () => {
         <div className="rounded-xl border border-grid-deep/20 bg-background/95 px-6 py-8 w-full space-y-6">
           {/* Personalized outcome – clear at a glance */}
           <h2
-            className={`text-3xl font-bold uppercase tracking-wide ${
-              isWinner ? "text-[#1E3D2F]" : "text-stone-600"
-            }`}
+            className="text-3xl font-bold uppercase tracking-wide"
+            style={{ color: isWinner ? GAME_COLORS.resultWinner : GAME_COLORS.resultLoser }}
           >
             {isWinner ? "You win" : "You lose"}
           </h2>

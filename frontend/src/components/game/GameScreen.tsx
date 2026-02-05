@@ -3,13 +3,8 @@ import { useGame } from "../../state/GameContext";
 import { leaveRoom, fire } from "../../services/gameApi";
 import { BoardGrid, CellStatus } from "./BoardGrid";
 import { playHit, playMiss, playSunk } from "../../utils/gameSounds";
-import { COLORS } from "../../theme/colors";
-
-type SinkingAnimation = {
-  phase: "fire" | "burned";
-  cells: { x: number; y: number }[];
-  board: "own" | "opponent";
-};
+import { GAME_COLORS } from "../../theme/gameColors";
+import type { SinkingAnimation } from "../../types/game";
 
 export const GameScreen: React.FC = () => {
   const {
@@ -26,8 +21,9 @@ export const GameScreen: React.FC = () => {
   const [myBoard, setMyBoard] = useState<CellStatus[][]>([]);
   const [enemyBoard, setEnemyBoard] = useState<CellStatus[][]>([]);
   const [sunkShips, setSunkShips] = useState<Set<string>>(new Set());
+  const [sinkingAnimation, setSinkingAnimation] = useState<SinkingAnimation | null>(null);
 
-  const sinkingTimer = useRef<number | null>(null);
+  const sinkingTimerRef = useRef<number[]>([]);
 
   useEffect(() => {
     const emptyBoard: CellStatus[][] = Array(10)
@@ -93,6 +89,19 @@ export const GameScreen: React.FC = () => {
         playMiss();
       }
 
+      if (sunkShipId && sunkShipCells.length > 0) {
+        sinkingTimerRef.current.forEach((id) => window.clearTimeout(id));
+        sinkingTimerRef.current = [];
+        const cells = sunkShipCells.map((c: { x: number; y: number }) => ({ x: c.x, y: c.y }));
+        const board: "own" | "opponent" = isMe ? "opponent" : "own";
+        setSinkingAnimation({ phase: "fire", cells, board });
+        const t1 = window.setTimeout(() => {
+          setSinkingAnimation((prev) => (prev ? { ...prev, phase: "burned" } : null));
+        }, 1200);
+        const t2 = window.setTimeout(() => setSinkingAnimation(null), 1800);
+        sinkingTimerRef.current = [t1, t2];
+      }
+
       const applyShotToBoard = (prev: CellStatus[][]) => {
         const copy = prev.map(row => [...row]);
 
@@ -127,6 +136,13 @@ export const GameScreen: React.FC = () => {
     };
   }, [socket, playerId]);
 
+  useEffect(() => {
+    return () => {
+      sinkingTimerRef.current.forEach((id) => window.clearTimeout(id));
+      sinkingTimerRef.current = [];
+    };
+  }, []);
+
   const handleBackToMenu = () => {
     if (socket && roomCode) {
       leaveRoom(socket, roomCode);
@@ -149,19 +165,19 @@ export const GameScreen: React.FC = () => {
 
       <h2
         className="text-xl font-bold mb-4"
-        style={{ color: COLORS.DARK_GREEN }}
+        style={{ color: GAME_COLORS.label }}
       >
         Game in progress
       </h2>
 
       <div className="mb-4">
-        <p className="text-lg" style={{ color: COLORS.DARK_GREEN }}>
+        <p className="text-lg" style={{ color: GAME_COLORS.label }}>
           Opponent: <strong>{opponentName || "Waiting..."}</strong>
         </p>
       </div>
 
       <div className="mb-6">
-        <p className="text-lg font-semibold" style={{ color: COLORS.DARK_GREEN }}>
+        <p className="text-lg font-semibold" style={{ color: GAME_COLORS.label }}>
           {isMyTurn ? "Your turn" : "Opponent's turn"}
         </p>
       </div>
@@ -170,7 +186,7 @@ export const GameScreen: React.FC = () => {
 
         {/* MI TABLERO */}
         <div>
-          <h3 style={{ color: COLORS.DARK_GREEN }} className="text-center mb-2">
+          <h3 style={{ color: GAME_COLORS.label }} className="text-center mb-2">
             Your board
           </h3>
 
@@ -179,6 +195,7 @@ export const GameScreen: React.FC = () => {
             board={myBoard}
             mode="defense"
             disabled
+            sinkingAnimation={sinkingAnimation?.board === "own" ? sinkingAnimation : null}
           />
         </div>
 
@@ -186,7 +203,7 @@ export const GameScreen: React.FC = () => {
         <div className="flex">
 
           <div>
-            <h3 style={{ color: COLORS.DARK_GREEN }} className="text-center mb-2">
+            <h3 style={{ color: GAME_COLORS.label }} className="text-center mb-2">
               Opponent board
             </h3>
 
@@ -196,6 +213,7 @@ export const GameScreen: React.FC = () => {
               mode="attack"
               onCellClick={handleFire}
               disabled={!isMyTurn}
+              sinkingAnimation={sinkingAnimation?.board === "opponent" ? sinkingAnimation : null}
             />
           </div>
 
@@ -221,8 +239,8 @@ export const GameScreen: React.FC = () => {
                       className="w-[9px] h-[9px] rounded-sm"
                       style={{
                         backgroundColor: isSunk
-                          ? COLORS.DARK_BROWN
-                          : COLORS.ORANGE
+                          ? GAME_COLORS.sunk
+                          : GAME_COLORS.ship
                       }}
                     />
                   ))}
@@ -239,8 +257,8 @@ export const GameScreen: React.FC = () => {
                     className="w-[9px] h-[9px]"
                     style={{
                       backgroundColor: sunkShips.has("lship")
-                        ? COLORS.DARK_BROWN
-                        : COLORS.ORANGE
+                        ? GAME_COLORS.sunk
+                        : GAME_COLORS.ship
                     }}
                   />
                 ))}
@@ -256,8 +274,8 @@ export const GameScreen: React.FC = () => {
         onClick={handleBackToMenu}
         className="mt-6 text-sm rounded-full border px-4 py-2"
         style={{
-          color: COLORS.DARK_GREEN,
-          borderColor: COLORS.DARK_GREEN
+          color: GAME_COLORS.label,
+          borderColor: GAME_COLORS.label
         }}
       >
         Back to main menu

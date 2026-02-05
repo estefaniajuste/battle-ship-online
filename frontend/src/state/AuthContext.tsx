@@ -18,7 +18,10 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "battle-ship-auth";
-const API_URL = "http://localhost:4000";
+/* URL del backend según entorno: VITE_API_URL o localhost en dev, producción en prod */
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? "https://battle-ship-online.onrender.com" : "http://localhost:4000");
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);

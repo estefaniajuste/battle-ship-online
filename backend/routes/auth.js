@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -19,24 +20,6 @@ function generateToken(user) {
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
-}
-
-// Middleware to protect routes
-function authMiddleware(req, res, next) {
-  const authHeader = req.headers.authorization || "";
-  const [, token] = authHeader.split(" ");
-
-  if (!token) {
-    return res.status(401).json({ message: "Authorization token missing" });
-  }
-
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload;
-    next();
-  } catch {
-    return res.status(401).json({ message: "Invalid or expired token" });
-  }
 }
 
 // POST /api/auth/register
@@ -135,5 +118,5 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
-export { router as authRouter, authMiddleware };
+export { router as authRouter };
 

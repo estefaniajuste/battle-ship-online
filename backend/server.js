@@ -4,6 +4,7 @@ import cors from "cors";
 import { Server } from "socket.io";
 import mongoose from "mongoose";
 import { authRouter } from "./routes/auth.js";
+import { gamesRouter } from "./routes/games.js";
 import {
   createRoom,
   joinRoom,
@@ -32,6 +33,8 @@ app.get("/", (_req, res) => {
 
 // Auth API routes
 app.use("/api/auth", authRouter);
+// Game history API (protected)
+app.use("/api/games", gamesRouter);
 
 const server = http.createServer(app);
 

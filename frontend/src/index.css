@@ -32,17 +32,24 @@
   66% { opacity: 0.9; filter: brightness(1.1); }
 }
 
+/* Sunk animation colors from theme/gameColors.ts (injected as CSS vars in main.tsx) */
 .cell-sunk-fire {
   animation: flame-flicker 0.4s ease-in-out infinite;
-  background: linear-gradient(135deg, #c2410c 0%, #ea580c 40%, #f97316 100%) !important;
-  border-color: #9a3412 !important;
-  box-shadow: inset 0 0 6px rgba(251, 146, 60, 0.5);
+  background: linear-gradient(135deg, var(--game-sunk-fire-start) 0%, var(--game-sunk-fire-mid) 40%, var(--game-sunk-fire-end) 100%) !important;
+  border-color: var(--game-sunk-fire-border) !important;
+  box-shadow: inset 0 0 6px var(--game-sunk-fire-shadow);
 }
 
 .cell-sunk-burned {
   transition: background 0.5s ease, border-color 0.5s ease;
-  background: linear-gradient(145deg, #292524 0%, #1c1917 100%) !important;
-  border-color: #44403c !important;
-  color: #a8a29e;
+  background: linear-gradient(145deg, var(--game-sunk-burned-start) 0%, var(--game-sunk-burned-end) 100%) !important;
+  border-color: var(--game-sunk-burned-border) !important;
+  color: var(--game-sunk-burned-text);
+}
+
+/* Attack cell hover – colors from theme/gameColors */
+.attack-cell-hover:hover {
+  background-color: var(--game-hover) !important;
+  border-color: var(--game-hover-border) !important;
 }
 

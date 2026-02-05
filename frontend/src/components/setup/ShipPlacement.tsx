@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useGame, ShipPlacement as ShipPlacementType, ShipOrientation } from "../../state/GameContext";
 import { placeShips } from "../../services/gameApi";
-import { COLORS } from "../../theme/colors";
+import { GAME_COLORS } from "../../theme/gameColors";
 
 type ShipDef = { id: string; size: number; label: string; shape?: "L" };
 
@@ -81,6 +81,31 @@ function getDef(shipId: string): ShipDef {
   return d;
 }
 
+/** Return the ship that contains cell (x, y), or null. For use in AI game hit/sunk resolution. */
+export function getShipAtCellFromPlacement(
+  placement: ShipPlacementType[],
+  x: number,
+  y: number
+): ShipPlacementType | null {
+  for (const ship of placement) {
+    if (!isOnBoard(ship)) continue;
+    const def = getDef(ship.id);
+    const cells = getShipCells(ship, def);
+    if (cells.some(([cx, cy]) => cx === x && cy === y)) return ship;
+  }
+  return null;
+}
+
+/** Return all cell [x,y] for a ship in the placement. For use in AI game sunk detection. */
+export function getShipCellsFromPlacement(
+  placement: ShipPlacementType[],
+  shipId: string
+): Array<[number, number]> {
+  const ship = placement.find((s) => s.id === shipId);
+  if (!ship || !isOnBoard(ship)) return [];
+  return getShipCells(ship, getDef(ship.id));
+}
+
 /** Build initial 10x10 board from placement: ship cells = "ship", rest = "unknown". Used for defense view. */
 export function getPlacementBoard(placement: ShipPlacementType[]): ("unknown" | "ship")[][] {
   const board: ("unknown" | "ship")[][] = Array.from({ length: BOARD_SIZE }, () =>
@@ -100,7 +125,7 @@ export function getPlacementBoard(placement: ShipPlacementType[]): ("unknown" | 
 }
 
 /** Generate a fully valid random placement for all ships (no overlaps, 1-cell buffer, in bounds). */
-function generateRandomPlacement(): ShipPlacementType[] {
+export function generateRandomPlacement(): ShipPlacementType[] {
   const forbidden = new Set<string>();
   const placements: ShipPlacementType[] = [];
   const defs = [...SHIP_DEFINITIONS].sort(() => Math.random() - 0.5);
@@ -142,7 +167,13 @@ function generateRandomPlacement(): ShipPlacementType[] {
   return placements;
 }
 
-export const ShipPlacementScreen: React.FC = () => {
+export interface ShipPlacementScreenProps {
+  /** When true, confirm button becomes "Start Game" and calls onStartAiGame(placed) instead of placeShips */
+  aiMode?: boolean;
+  onStartAiGame?: (placement: ShipPlacementType[]) => void;
+}
+
+export const ShipPlacementScreen: React.FC<ShipPlacementScreenProps> = ({ aiMode = false, onStartAiGame } = {}) => {
   const { socket, roomCode, playersReady, playerId, setMyPlacement } = useGame();
   const [orientation, setOrientation] = useState<ShipOrientation>("horizontal");
   const [currentPlacementIndex, setCurrentPlacementIndex] = useState(0);
@@ -367,9 +398,15 @@ export const ShipPlacementScreen: React.FC = () => {
   };
 
   const handleConfirm = async () => {
-    if (!socket || !roomCode || !allShipsPlaced || !isValidPlacement) return;
-    setSubmitting(true);
+    if (!allShipsPlaced || !isValidPlacement) return;
     const placed = ships.filter(isOnBoard);
+    if (aiMode) {
+      setMyPlacement(placed);
+      onStartAiGame?.(placed);
+      return;
+    }
+    if (!socket || !roomCode) return;
+    setSubmitting(true);
     await placeShips(socket, roomCode, placed);
     setMyPlacement(placed);
     setSubmitting(false);
@@ -379,7 +416,7 @@ export const ShipPlacementScreen: React.FC = () => {
     () => (playerId ? playersReady[playerId] : false),
     [playersReady, playerId]
   );
-  const isLocked = myReady;
+  const isLocked = !aiMode && myReady;
 
   const cellIsOccupied = (x: number, y: number) =>
     ships.some(
@@ -424,7 +461,7 @@ export const ShipPlacementScreen: React.FC = () => {
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-8">
         <h1
           className="text-xl font-semibold tracking-wide"
-          style={{ color: COLORS.DARK_GREEN }}
+          style={{ color: GAME_COLORS.label }}
         >
           Place your fleet
         </h1>
@@ -436,7 +473,7 @@ export const ShipPlacementScreen: React.FC = () => {
               <div
                 key={letter}
                 className="w-7 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0"
-                style={{ color: COLORS.DARK_GREEN }}
+                style={{ color: GAME_COLORS.label }}
               >
                 {letter}
               </div>
@@ -447,16 +484,16 @@ export const ShipPlacementScreen: React.FC = () => {
               {ROW_LABELS.map((num) => (
                 <div
                   key={num}
-                  className="h-7 flex items-center justify-center text-xs font-medium"
-                  style={{ color: COLORS.DARK_GREEN }}
-                >
-                  {num}
-                </div>
+                className="h-7 flex items-center justify-center text-xs font-medium"
+                style={{ color: GAME_COLORS.label }}
+              >
+                {num}
+              </div>
               ))}
             </div>
             <div
-              className="grid grid-cols-10 grid-rows-10 border rounded-lg overflow-hidden bg-grid-deep/10"
-              style={{ borderColor: COLORS.DARK_GREEN }}
+            className="grid grid-cols-10 grid-rows-10 border rounded-lg overflow-hidden bg-grid-deep/10"
+            style={{ borderColor: GAME_COLORS.label }}
               onMouseLeave={() => setHoverCell(null)}
               onMouseMove={handleCellMouseMove}
             >
@@ -479,25 +516,28 @@ export const ShipPlacementScreen: React.FC = () => {
                     onMouseEnter={() => !isLocked && setHoverCell({ x, y })}
                     className={`w-7 h-7 flex-shrink-0 border transition-colors select-none ${
                       isLocked ? "cursor-default" : "cursor-pointer hover:ring-1 hover:ring-accent-primary/50 hover:ring-inset"
-                    } ${
-                      previewValid
-                        ? "bg-green-500/35 border-green-600/60"
-                        : previewInvalid
-                        ? "bg-red-500/35 border-red-600/60"
-                        : invalidPlaced
-                        ? "bg-amber-500/20 border-amber-500/50"
-                        : active
-                        ? "bg-accent-primary/25 border-accent-primary/60"
-                        : occupied
-                        ? "bg-background/90"
-                        : "bg-background/90"
-                    }`}
+                    } ${occupied && !previewValid && !previewInvalid && !invalidPlaced && !active ? "" : ""}`}
                     style={{
-                      // Softer inner grid lines: same DARK_GREEN tone with low opacity
-                      borderColor: "rgba(30, 61, 47, 0.25)",
-                      backgroundColor: occupied && !previewValid && !previewInvalid && !invalidPlaced && !active
-                        ? COLORS.ORANGE
-                        : undefined
+                      borderColor: previewValid
+                        ? GAME_COLORS.previewValidBorder
+                        : previewInvalid
+                        ? GAME_COLORS.previewInvalidBorder
+                        : invalidPlaced
+                        ? GAME_COLORS.placementWarningBorder
+                        : active
+                        ? GAME_COLORS.previewActiveBorder
+                        : GAME_COLORS.gridLine,
+                      backgroundColor: previewValid
+                        ? GAME_COLORS.previewValid
+                        : previewInvalid
+                        ? GAME_COLORS.previewInvalid
+                        : invalidPlaced
+                        ? GAME_COLORS.placementWarning
+                        : active
+                        ? GAME_COLORS.previewActive
+                        : occupied
+                        ? GAME_COLORS.ship
+                        : GAME_COLORS.emptyCell
                     }}
                   />
                 );
@@ -510,7 +550,7 @@ export const ShipPlacementScreen: React.FC = () => {
           <div className="flex items-center justify-between px-1">
             <span
               className="text-xs font-medium uppercase tracking-wide"
-              style={{ color: COLORS.DARK_GREEN }}
+              style={{ color: GAME_COLORS.label }}
             >
               Fleet
             </span>
@@ -519,7 +559,7 @@ export const ShipPlacementScreen: React.FC = () => {
                 type="button"
                 onClick={handleRotate}
                 className="text-xs rounded-full border px-3 py-1.5 hover:bg-grid-deep/10 transition-colors"
-                style={{ borderColor: COLORS.DARK_GREEN, color: COLORS.DARK_GREEN }}
+                style={{ borderColor: GAME_COLORS.label, color: GAME_COLORS.label }}
               >
                 Rotate current
               </button>
@@ -539,18 +579,27 @@ export const ShipPlacementScreen: React.FC = () => {
                 <div
                   key={ship.id}
                   role="listitem"
-                  className={`w-full flex items-center justify-between rounded-lg border-2 px-4 py-2 text-left text-sm transition-all cursor-default ${
-                    rotationRejected
-                      ? "border-red-500 bg-red-500/15"
+                  className="w-full flex items-center justify-between rounded-lg border-2 px-4 py-2 text-left text-sm transition-all cursor-default opacity-80"
+                  style={{
+                    borderColor: rotationRejected
+                      ? GAME_COLORS.rotationRejectedBorder
                       : isCurrentInSequence
-                      ? "border-accent-primary bg-accent-primary/15 ring-2 ring-accent-primary/30"
-                      : "border-grid-deep/20 bg-white/80 opacity-80"
-                  }`}
+                      ? GAME_COLORS.previewActiveBorder
+                      : GAME_COLORS.gridLine,
+                    backgroundColor: rotationRejected
+                      ? GAME_COLORS.rotationRejectedBg
+                      : isCurrentInSequence
+                      ? "rgba(224, 138, 61, 0.15)"
+                      : undefined
+                  }}
                 >
                   <span className="font-medium text-text-main flex items-center gap-2">
                     {ship.label}
                     {isCurrentInSequence && (
-                      <span className="text-xs font-normal text-accent-primary uppercase tracking-wide">
+                      <span
+                        className="text-xs font-normal uppercase tracking-wide"
+                        style={{ color: GAME_COLORS.previewActive }}
+                      >
                         Place next
                       </span>
                     )}
@@ -563,16 +612,16 @@ export const ShipPlacementScreen: React.FC = () => {
                       {L_OFFSETS[orient % 4].map(({ dx, dy }, idx) => (
                         <span
                           key={idx}
-                          className={`w-2 h-2 rounded-sm flex-shrink-0 ${
-                            rotationRejected ? "bg-red-500" : isCurrentInSequence ? "bg-accent-primary" : ""
-                          }`}
+                          className="w-2 h-2 rounded-sm flex-shrink-0"
                           style={{
                             gridColumn: dx + 1,
                             gridRow: dy + 1,
                             backgroundColor:
-                              rotationRejected || isCurrentInSequence
-                                ? undefined
-                                : COLORS.ORANGE
+                              rotationRejected
+                                ? GAME_COLORS.rotationRejected
+                                : isCurrentInSequence
+                                ? GAME_COLORS.previewActive
+                                : GAME_COLORS.ship
                           }}
                         />
                       ))}
@@ -586,14 +635,14 @@ export const ShipPlacementScreen: React.FC = () => {
                       {Array.from({ length: ship.size }).map((_, idx) => (
                         <span
                           key={idx}
-                          className={`w-2.5 h-2 rounded-sm flex-shrink-0 ${
-                            rotationRejected ? "bg-red-500" : isCurrentInSequence ? "bg-accent-primary" : ""
-                          }`}
+                          className="w-2.5 h-2 rounded-sm flex-shrink-0"
                           style={{
                             backgroundColor:
-                              rotationRejected || isCurrentInSequence
-                                ? undefined
-                                : COLORS.ORANGE
+                              rotationRejected
+                                ? GAME_COLORS.rotationRejected
+                                : isCurrentInSequence
+                                ? GAME_COLORS.previewActive
+                                : GAME_COLORS.ship
                           }}
                         />
                       ))}
@@ -604,7 +653,11 @@ export const ShipPlacementScreen: React.FC = () => {
             })}
           </div>
           {rotationRejectedShipId && (
-            <p className="text-xs text-red-600 font-medium mt-1.5 px-1" role="alert">
+            <p
+              className="text-xs font-medium mt-1.5 px-1"
+              style={{ color: GAME_COLORS.rotationRejected }}
+              role="alert"
+            >
               Cannot rotate here – not enough space
             </p>
           )}
@@ -615,7 +668,11 @@ export const ShipPlacementScreen: React.FC = () => {
             type="button"
             onClick={handleRandomize}
             disabled={isLocked}
-            className="w-full rounded-full border-2 border-[#8B6F47] text-[#8B6F47] bg-transparent px-6 py-3 text-sm font-medium uppercase tracking-wide transition-all hover:bg-[#8B6F47]/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-full border-2 bg-transparent px-6 py-3 text-sm font-medium uppercase tracking-wide transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              borderColor: GAME_COLORS.buttonSecondary,
+              color: GAME_COLORS.buttonSecondary
+            }}
           >
             Randomize fleet
           </button>
@@ -625,10 +682,15 @@ export const ShipPlacementScreen: React.FC = () => {
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!allShipsPlaced || !isValidPlacement || submitting || isLocked}
-            className="w-full rounded-full bg-[#1E3D2F] text-white px-6 py-3 text-sm font-medium uppercase tracking-wide transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2A523F] disabled:hover:bg-[#1E3D2F]"
+            disabled={!allShipsPlaced || !isValidPlacement || (submitting && !aiMode) || isLocked}
+            className="w-full rounded-full text-white px-6 py-3 text-sm font-medium uppercase tracking-wide transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: GAME_COLORS.buttonPrimary
+            }}
           >
-            {isLocked
+            {aiMode
+              ? "Start Game"
+              : isLocked
               ? "Waiting for opponent…"
               : submitting
               ? "Confirming…"

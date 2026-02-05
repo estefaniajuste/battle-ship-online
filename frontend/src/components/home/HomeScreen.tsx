@@ -17,14 +17,13 @@ export const HomeScreen: React.FC = () => {
     matchmaking,
     setPlayersReady,
     setResult,
-    setPlayerId
+    setPlayerId,
+    effectivePlayerName
   } = useGame();
   const { user, logout } = useAuth();
   const [roomInput, setRoomInput] = useState("");
   const [loadingAction, setLoadingAction] = useState<"create" | "join" | "play" | null>(null);
   const [matchmakingTimeout, setMatchmakingTimeout] = useState(false);
-
-  const effectiveName = playerName || "Player";
 
   const handleCancelSearch = useCallback(() => {
     if (socket) {
@@ -68,7 +67,7 @@ export const HomeScreen: React.FC = () => {
     setLoadingAction("create");
     setResult(null);
     setPlayersReady({});
-    const response = await createRoom(socket, effectiveName);
+    const response = await createRoom(socket, effectivePlayerName);
     setLoadingAction(null);
     if (response.ok && response.roomCode && response.playerId) {
       setRoomCode(response.roomCode);
@@ -91,7 +90,7 @@ export const HomeScreen: React.FC = () => {
     setLoadingAction("join");
     setResult(null);
     setPlayersReady({});
-    const response = await joinRoom(socket, roomInput.trim().toUpperCase(), effectiveName);
+    const response = await joinRoom(socket, roomInput.trim().toUpperCase(), effectivePlayerName);
     setLoadingAction(null);
     if (response.ok && response.roomCode && response.playerId) {
       setRoomCode(response.roomCode);
@@ -112,7 +111,7 @@ export const HomeScreen: React.FC = () => {
     setMatchmakingTimeout(false);
     setResult(null);
     setPlayersReady({});
-    const res = await queueMatch(socket, effectiveName);
+    const res = await queueMatch(socket, effectivePlayerName);
     if (!res.ok) {
       setMatchmaking(false);
       setMatchmakingTimeout(false);
@@ -134,7 +133,28 @@ export const HomeScreen: React.FC = () => {
                   {user.username}
                 </span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setScreen("history")}
+                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
+                >
+                  View History
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen("stats")}
+                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
+                >
+                  My Stats
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen("leaderboard")}
+                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
+                >
+                  Global Ranking
+                </button>
                 <button
                   type="button"
                   onClick={() => setScreen("profile")}
@@ -156,7 +176,7 @@ export const HomeScreen: React.FC = () => {
               <div className="text-xs text-text-main/70">
                 You are playing in anonymous mode.
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setScreen("login")}
@@ -218,6 +238,17 @@ export const HomeScreen: React.FC = () => {
             className="w-full rounded-full bg-[#8B6F47] text-white px-6 py-3 text-sm font-medium tracking-wide uppercase transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-md hover:scale-[1.02] hover:bg-[#9B7F57] active:translate-y-0 active:scale-100 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100"
           >
             {loadingAction === "join" ? "Joining..." : "JOIN ROOM"}
+          </button>
+        </div>
+
+        {/* Play vs Computer - local AI, no login required */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setScreen("ai_placement")}
+            className="w-full rounded-full bg-[#2A523F] text-[#FFFFFF] px-6 py-3 text-sm font-medium tracking-wide uppercase transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-md hover:scale-[1.02] hover:bg-[#355d4a] active:translate-y-0 active:scale-100 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100"
+          >
+            Play vs Computer
           </button>
         </div>
 

@@ -1,6 +1,6 @@
 import React from "react";
 import type { SinkingAnimation } from "../../types/game";
-import { COLORS } from "../../theme/colors";
+import { GAME_COLORS } from "../../theme/gameColors";
 
 export type CellStatus = "empty" | "ship" | "hit" | "miss" | "sunk";
 interface BoardGridProps {
@@ -36,7 +36,7 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
       <div className="text-center">
         <span
           className="text-sm font-medium uppercase tracking-wide"
-          style={{ color: COLORS.DARK_GREEN }}
+          style={{ color: GAME_COLORS.label }}
         >
           {title}
         </span>
@@ -50,7 +50,7 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
               <div
                 key={letter}
                 className="flex items-center justify-center text-xs font-medium"
-                style={{ color: COLORS.DARK_GREEN }}
+                style={{ color: GAME_COLORS.label }}
               >
                 {letter}
               </div>
@@ -64,7 +64,7 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
               <div
                 key={num}
                 className="h-7 flex items-center justify-center text-xs font-medium"
-                style={{ color: COLORS.DARK_GREEN }}
+                style={{ color: GAME_COLORS.label }}
               >
                 {num}
               </div>
@@ -72,7 +72,7 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
           </div>
           <div
             className="grid grid-cols-10 grid-rows-10 border rounded-lg overflow-hidden bg-grid-deep/5 flex-1 min-w-0"
-            style={{ borderColor: COLORS.DARK_GREEN }}
+            style={{ borderColor: GAME_COLORS.label }}
           >
             {Array.from({ length: BOARD_SIZE * BOARD_SIZE }).map((_, idx) => {
               const x = idx % BOARD_SIZE;
@@ -87,58 +87,41 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
               const common = "relative flex items-center justify-center w-7 h-7 flex-shrink-0 transition-all duration-200 border";
 
               let stateClasses = "";
+              const inlineStyle: React.CSSProperties = { borderColor: GAME_COLORS.gridLine };
+
               if (isSinkingCell && sinkingPhase === "fire") {
                 stateClasses = "cell-sunk-fire text-white";
               } else if (isSinkingCell && sinkingPhase === "burned") {
                 stateClasses = "cell-sunk-burned";
-              } else if (isOwnBoard) {
-                if (isSunk) {
-                  stateClasses = "bg-stone-800/95 border-stone-700 text-stone-400";
-                } else if (isHit) {
-                  stateClasses = "bg-accent-primary/80 border-accent-primary text-white";
-                } else if (isMiss) {
-                  stateClasses = "bg-grid-deep/20 border-grid-deep/30";
-                } else if (hasShip) {
-                  stateClasses = "bg-background/90";
-                } else {
-                  stateClasses = "bg-background/90";
-                }
+              } else if (isSunk) {
+                inlineStyle.backgroundColor = GAME_COLORS.sunk;
+                inlineStyle.borderColor = GAME_COLORS.sunkBorder;
+                inlineStyle.color = GAME_COLORS.sunkText;
+              } else if (isHit) {
+                inlineStyle.backgroundColor = GAME_COLORS.hit;
+                inlineStyle.borderColor = GAME_COLORS.hit;
+                inlineStyle.color = GAME_COLORS.hitText;
+              } else if (isMiss) {
+                inlineStyle.backgroundColor = GAME_COLORS.miss;
+                inlineStyle.borderColor = GAME_COLORS.missBorder;
+              } else if (isOwnBoard && hasShip) {
+                inlineStyle.backgroundColor = GAME_COLORS.ship;
+                inlineStyle.borderColor = GAME_COLORS.ship;
               } else {
-                if (isSunk) {
-                  stateClasses = "bg-stone-800/95 border-stone-700 text-stone-400";
-                } else if (isHit) {
-                  stateClasses = "bg-accent-primary/80 border-accent-primary text-white";
-                } else if (isMiss) {
-                  stateClasses = "bg-grid-deep/20 border-grid-deep/30";
-                } else {
-                  stateClasses = disabled
-                    ? "bg-background/80 cursor-not-allowed opacity-70"
-                    : "bg-background/90 hover:bg-accent-primary/20 hover:border-accent-primary/50 cursor-pointer active:scale-95";
+                inlineStyle.backgroundColor = GAME_COLORS.emptyCell;
+                if (!isOwnBoard && disabled) {
+                  inlineStyle.opacity = GAME_COLORS.disabledOpacity;
+                  stateClasses = "cursor-not-allowed";
+                } else if (!isOwnBoard) {
+                  stateClasses = "cursor-pointer active:scale-95 attack-cell-hover";
                 }
-              }
-
-              const inlineStyle: React.CSSProperties = {
-                // Use same DARK_GREEN tone but with low opacity for softer grid lines
-                borderColor: "rgba(30, 61, 47, 0.25)"
-              };
-
-              if (
-                isOwnBoard &&
-                hasShip &&
-                !isSunk &&
-                !isHit &&
-                !isMiss &&
-                !isSinkingCell
-              ) {
-                inlineStyle.backgroundColor = COLORS.ORANGE;
-                inlineStyle.borderColor = COLORS.ORANGE;
               }
 
               return (
                 <button
                   key={idx}
                   type="button"
-                  className={`${common} ${stateClasses}`}
+                  className={common + (stateClasses ? ` ${stateClasses}` : "")}
                   style={inlineStyle}
                   onClick={
                     disabled || !onCellClick
@@ -164,7 +147,13 @@ export const BoardGrid: React.FC<BoardGridProps> = ({
                   {isSunk && !isSinkingCell && <span className="text-xs font-bold" aria-hidden>✕</span>}
                   {isSinkingCell && sinkingPhase === "burned" && <span className="text-xs font-bold text-stone-500" aria-hidden>✕</span>}
                   {isHit && !isSunk && <span className="w-1.5 h-1.5 rounded-full bg-current opacity-90" aria-hidden />}
-                  {isMiss && <span className="w-1.5 h-1.5 rounded-full bg-sky-600/40 border border-sky-500/30" aria-hidden />}
+                  {isMiss && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full border"
+                      style={{ backgroundColor: GAME_COLORS.missDot, borderColor: GAME_COLORS.missDotBorder }}
+                      aria-hidden
+                    />
+                  )}
                 </button>
               );
             })}
