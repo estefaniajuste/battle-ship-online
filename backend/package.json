@@ -9,12 +9,15 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.22.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"
   }
 }
-

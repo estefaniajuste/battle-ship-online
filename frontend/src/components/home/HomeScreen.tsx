@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { MainLayout } from "../layout/MainLayout";
 import { useGame } from "../../state/GameContext";
 import { createRoom, joinRoom, queueMatch, cancelQueue } from "../../services/gameApi";
+import { useAuth } from "../../state/AuthContext";
 
 const MATCHMAKING_TIMEOUT_MS = 60_000;
 
@@ -18,6 +19,7 @@ export const HomeScreen: React.FC = () => {
     setResult,
     setPlayerId
   } = useGame();
+  const { user, logout } = useAuth();
   const [roomInput, setRoomInput] = useState("");
   const [loadingAction, setLoadingAction] = useState<"create" | "join" | "play" | null>(null);
   const [matchmakingTimeout, setMatchmakingTimeout] = useState(false);
@@ -122,6 +124,58 @@ export const HomeScreen: React.FC = () => {
   return (
     <MainLayout>
       <div className="space-y-8">
+        {/* Auth shortcuts – optional in Phase 1 */}
+        <div className="flex items-center justify-between gap-3">
+          {user ? (
+            <>
+              <div className="text-xs text-text-main/70">
+                Signed in as{" "}
+                <span className="font-semibold text-text-main">
+                  {user.username}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScreen("profile")}
+                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
+                >
+                  My profile
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
+                >
+                  Log out
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-xs text-text-main/70">
+                You are playing in anonymous mode.
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScreen("login")}
+                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
+                >
+                  Log in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen("register")}
+                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
+                >
+                  Register
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Player Name Input */}
         <div className="space-y-2">
           <label className="block text-xs font-medium text-text-main/70 uppercase tracking-wide">

@@ -2,6 +2,8 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
+import mongoose from "mongoose";
+import { authRouter } from "./routes/auth.js";
 import {
   createRoom,
   joinRoom,
@@ -15,15 +17,21 @@ import {
 import { enqueuePlayer, removeFromQueue, tryMatch } from "./matchmaking.js";
 
 const PORT = process.env.PORT || 4000;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/battle_ship";
 
 const app = express();
 
-// CORS abierto para evitar bloqueos entre Vercel y Render
+// Basic middleware
 app.use(cors());
+app.use(express.json());
 
+// Health check
 app.get("/", (_req, res) => {
   res.json({ status: "ok", message: "Battle Ship backend running" });
 });
+
+// Auth API routes
+app.use("/api/auth", authRouter);
 
 const server = http.createServer(app);
 
@@ -235,6 +243,17 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`🚀 Battle Ship backend listening on port ${PORT}`);
-});
+// Connect to MongoDB and then start the HTTP/socket server
+mongoose
+  .connect(MONGO_URI, {
+    autoIndex: true
+  })
+  .then(() => {
+    console.log("✅ Connected to MongoDB");
+    server.listen(PORT, () => {
+      console.log(`🚀 Battle Ship backend listening on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ Failed to connect to MongoDB", err);
+  });

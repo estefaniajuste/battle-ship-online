@@ -6,7 +6,10 @@ export type Screen =
   | "waiting"
   | "placement"
   | "game"
-  | "result";
+  | "result"
+  | "login"
+  | "register"
+  | "profile";
 
 export type ResultType = "win" | "lose" | null;
 
@@ -50,8 +53,10 @@ export interface GameContextValue {
 
 const GameContext = createContext<GameContextValue | undefined>(undefined);
 
-/* CAMBIO CLAVE: URL DEL BACKEND ONLINE */
-const BACKEND_URL = "http://localhost:4000";
+/* URL DEL BACKEND SEGÚN ENTORNO */
+const BACKEND_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [screen, setScreen] = useState<Screen>("home");
@@ -107,13 +112,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const opponentEntry = Object.values(players).find(
           (p: any) => p.id !== currentPlayerId
         ) as { id: string; name: string } | undefined;
-    
+
         if (opponentEntry) {
           setOpponentName(opponentEntry.name);
         }
       }
     });
-    
 
     socket.on("room:ready", ({ roomCode, players }) => {
       setScreen("placement");
