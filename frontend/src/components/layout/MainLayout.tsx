@@ -145,21 +145,15 @@ export const MainLayout: React.FC<{ children: React.ReactNode; isHome?: boolean 
               {/* Needle: fire/flame style – wrapper rotates, needle + trail particles inside */}
               <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none">
                 <div className="radar-needle-wrapper">
-                  {/* Trail particles – yellow/orange/red, staggered fade */}
-                  <div className="radar-flame-particle radar-flame-particle--yellow" style={{ left: "52%", animationDelay: "0s" }} />
-                  <div className="radar-flame-particle radar-flame-particle--orange" style={{ left: "58%", animationDelay: "0.2s" }} />
-                  <div className="radar-flame-particle radar-flame-particle--red" style={{ left: "64%", animationDelay: "0.4s" }} />
-                  <div className="radar-flame-particle radar-flame-particle--orange" style={{ left: "70%", animationDelay: "0.6s" }} />
-                  <div className="radar-flame-particle radar-flame-particle--yellow" style={{ left: "76%", animationDelay: "0.8s" }} />
-                  <div className="radar-flame-particle radar-flame-particle--red" style={{ left: "82%", animationDelay: "1s" }} />
-                  <div className="radar-flame-particle radar-flame-particle--yellow" style={{ left: "88%", animationDelay: "0.15s" }} />
-                  <div className="radar-flame-particle radar-flame-particle--orange" style={{ left: "94%", animationDelay: "0.35s" }} />
-                  {/* Main needle – fire gradient + strong glow + flame flicker */}
+                  {/* Estela fina: partículas sutiles detrás de la aguja */}
+                  <div className="radar-flame-particle radar-flame-particle--yellow" style={{ left: "72%", animationDelay: "0s" }} />
+                  <div className="radar-flame-particle radar-flame-particle--orange" style={{ left: "80%", animationDelay: "0.25s" }} />
+                  <div className="radar-flame-particle radar-flame-particle--red" style={{ left: "88%", animationDelay: "0.5s" }} />
+                  <div className="radar-flame-particle radar-flame-particle--orange" style={{ left: "94%", animationDelay: "0.15s" }} />
+                  {/* Aguja fina – rayo incandescente con gradiente fuego */}
                   <div className="radar-needle-flame" />
-                  {/* Destellos en la punta de la aguja */}
-                  <div className="radar-needle-tip-spark" style={{ left: "96%", animationDelay: "0s" }} />
-                  <div className="radar-needle-tip-spark" style={{ left: "98%", animationDelay: "0.1s" }} />
-                  <div className="radar-needle-tip-spark" style={{ left: "99.5%", animationDelay: "0.2s" }} />
+                  {/* Un destello sutil en la punta */}
+                  <div className="radar-needle-tip-spark" style={{ left: "98%", animationDelay: "0s" }} />
                 </div>
               </div>
               {/* Center dot – fire core */}
