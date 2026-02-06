@@ -1,10 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-background text-text-main font-sans antialiased;
+    background-color: #F3E1D3;
+    @apply text-text-main font-sans antialiased;
     font-feature-settings: "kern" 1, "liga" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -52,4 +55,222 @@
   background-color: var(--game-hover) !important;
   border-color: var(--game-hover-border) !important;
 }
+
+/* Dark green button sparkle – subtle orange glow dots */
+@keyframes sparkle-fade {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  45% { opacity: 0.75; transform: scale(1); }
+  55% { opacity: 0.75; transform: scale(1); }
+}
+
+.btn-dark-green-sparkle {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-dark-green-sparkle .sparkle-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #D97A1F;
+  box-shadow: 0 0 8px #D97A1F, 0 0 4px #F1C40F;
+  animation: sparkle-fade 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Radar: persistent luminous trail with fade (rotating arc) – fire tones */
+@keyframes radar-trail-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.radar-trail-arc {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 215, 0, 0.35) 18deg,
+    rgba(255, 140, 0, 0.28) 40deg,
+    rgba(255, 69, 0, 0.2) 65deg,
+    rgba(178, 34, 34, 0.12) 90deg,
+    rgba(255, 69, 0, 0.04) 115deg,
+    transparent 140deg
+  );
+  animation: radar-trail-sweep 4s linear infinite;
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+/* Radar needle: fire/flame – gradient + glow muy fuerte */
+@keyframes radar-needle-flame {
+  0%, 100% { transform: translateY(-50%) rotate(0deg) scaleY(1); filter: brightness(1.1) drop-shadow(0 0 10px #FFD700) drop-shadow(0 0 18px #FF4500); }
+  25% { transform: translateY(-50%) rotate(0.4deg) scaleY(1.03); filter: brightness(1.25) drop-shadow(0 0 14px #FFD700) drop-shadow(0 0 22px #FF4500); }
+  50% { transform: translateY(-50%) rotate(-0.3deg) scaleY(0.97); filter: brightness(1.15) drop-shadow(0 0 12px #FFD700) drop-shadow(0 0 20px #FF4500); }
+  75% { transform: translateY(-50%) rotate(0.25deg) scaleY(1.02); filter: brightness(1.3) drop-shadow(0 0 16px #FFD700) drop-shadow(0 0 24px #FF4500); }
+}
+
+.radar-needle-flame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 8px;
+  margin-top: -4px;
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    #FFD700 0%,
+    #FFD700 6%,
+    #FF8C00 22%,
+    #FF4500 48%,
+    #FF6347 72%,
+    #B22222 92%,
+    #8B0000 100%
+  );
+  border-radius: 0 6px 6px 0;
+  animation: radar-needle-flame 0.12s ease-in-out infinite;
+  box-shadow:
+    0 0 28px 4px rgba(255, 215, 0, 0.95),
+    0 0 45px 8px rgba(255, 140, 0, 0.9),
+    0 0 65px 14px rgba(255, 69, 0, 0.85),
+    0 0 80px 18px rgba(178, 34, 34, 0.6),
+    0 0 6px 0 rgba(255, 255, 255, 0.8);
+  filter: drop-shadow(0 0 10px #FFD700) drop-shadow(0 0 16px #FF4500) drop-shadow(0 0 8px #B22222);
+  pointer-events: none;
+}
+
+/* Destellos en la punta de la aguja */
+@keyframes radar-tip-spark {
+  0%, 100% { opacity: 0.4; transform: translateY(-50%) scale(0.8); }
+  50% { opacity: 1; transform: translateY(-50%) scale(1.2); }
+}
+
+.radar-needle-tip-spark {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 50%;
+  transform-origin: left center;
+  pointer-events: none;
+  animation: radar-tip-spark 0.4s ease-in-out infinite;
+  background: radial-gradient(circle at 30% 30%, #FFD700, #FF4500 60%, transparent 80%);
+  box-shadow: 0 0 14px #FFD700, 0 0 20px #FF8C00;
+}
+
+/* Needle rotation – applied to wrapper so flame keyframes combine */
+@keyframes radar-needle-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.radar-needle-wrapper {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: radar-needle-rotate 4s linear infinite;
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+/* Trail particles – rastro 1–1.5s, opacidad decreciente */
+@keyframes radar-flame-particle-fade {
+  0% { opacity: 0.95; transform: translateY(-50%) scale(1.1); }
+  40% { opacity: 0.5; transform: translateY(-50%) scale(0.95); }
+  80% { opacity: 0.15; transform: translateY(-50%) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-50%) scale(0.7); }
+}
+
+.radar-flame-particle {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 50%;
+  transform-origin: left center;
+  pointer-events: none;
+  animation: radar-flame-particle-fade 1.4s ease-out infinite;
+}
+
+.radar-flame-particle--yellow {
+  background: #FFD700;
+  box-shadow: 0 0 14px #FFD700, 0 0 6px rgba(255, 255, 255, 0.5);
+}
+.radar-flame-particle--orange {
+  background: #FF4500;
+  box-shadow: 0 0 14px #FF8C00, 0 0 6px #FF4500;
+}
+.radar-flame-particle--red {
+  background: #B22222;
+  box-shadow: 0 0 12px #B22222, 0 0 4px rgba(255, 69, 0, 0.6);
+}
+
+/* Radar ship blips – más apagados para que la aguja domine */
+@keyframes radar-blip-flicker {
+  0%, 100% { opacity: 0.7; filter: brightness(1); box-shadow: 0 0 8px #D97A1F, 0 0 4px #F1C40F; }
+  50% { opacity: 0.8; filter: brightness(1.15); box-shadow: 0 0 10px #D97A1F, 0 0 6px #F1C40F; }
+}
+
+.radar-ship-blip {
+  background-color: #D97A1F;
+  animation: radar-blip-flicker 1.8s ease-in-out infinite;
+  box-shadow: 0 0 8px #D97A1F, 0 0 4px #F1C40F;
+}
+
+/* Radar inner sparkles (orange dots) – more visible */
+@keyframes radar-sparkle-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.radar-inner-sparkle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #F1C40F;
+  box-shadow: 0 0 14px #F1C40F, 0 0 6px #D97A1F;
+  animation: radar-sparkle-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Floating yellow particles on radar */
+@keyframes radar-spark-flicker {
+  0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  30% { opacity: 0.9; transform: scale(1) rotate(12deg); }
+  55% { opacity: 0.5; transform: scale(0.8) rotate(-8deg); }
+}
+
+.radar-spark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: radial-gradient(circle at 30% 30%, #FFEFB0 0, #FFB347 40%, transparent 80%);
+  box-shadow:
+    0 0 10px rgba(255, 215, 0, 0.9),
+    0 0 16px rgba(255, 140, 0, 0.7);
+  transform-origin: center center;
+  animation: radar-spark-flicker 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Orange button sparkles (Log in, Play Online) – reuses sparkle-fade */
+.btn-orange-sparkle {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-orange-sparkle .sparkle-dot {
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 0 8px rgba(255,255,255,0.8), 0 0 4px #F1C40F;
+  animation: sparkle-fade 4s ease-in-out infinite;
+}
+
 

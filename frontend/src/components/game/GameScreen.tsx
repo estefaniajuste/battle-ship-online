@@ -20,7 +20,8 @@ export const GameScreen: React.FC = () => {
 
   const [myBoard, setMyBoard] = useState<CellStatus[][]>([]);
   const [enemyBoard, setEnemyBoard] = useState<CellStatus[][]>([]);
-  const [sunkShips, setSunkShips] = useState<Set<string>>(new Set());
+  // Tracks ONLY opponent ships for the right-hand legend
+  const [sunkOpponentShips, setSunkOpponentShips] = useState<Set<string>>(new Set());
   const [sinkingAnimation, setSinkingAnimation] = useState<SinkingAnimation | null>(null);
 
   const sinkingTimerRef = useRef<number[]>([]);
@@ -73,11 +74,12 @@ export const GameScreen: React.FC = () => {
         autoRevealedWater = []
       } = data;
 
-      if (sunkShipId) {
-        setSunkShips(prev => new Set([...prev, sunkShipId]));
-      }
-
       const isMe = attackerId === playerId;
+
+      if (sunkShipId && isMe) {
+        // Legend must only reflect opponent ships, never own ships
+        setSunkOpponentShips(prev => new Set([...prev, sunkShipId]));
+      }
 
       if (hit) {
         if (sunkShipId) {
@@ -229,7 +231,7 @@ export const GameScreen: React.FC = () => {
               { id: "dinghy1", size: 1 },
               { id: "dinghy2", size: 1 }
             ].map((ship) => {
-              const isSunk = sunkShips.has(ship.id);
+              const isSunk = sunkOpponentShips.has(ship.id);
 
               return (
                 <div key={ship.id} className="flex gap-[2px]">
@@ -256,7 +258,7 @@ export const GameScreen: React.FC = () => {
                     key={i}
                     className="w-[9px] h-[9px]"
                     style={{
-                      backgroundColor: sunkShips.has("lship")
+                      backgroundColor: sunkOpponentShips.has("lship")
                         ? GAME_COLORS.sunk
                         : GAME_COLORS.ship
                     }}

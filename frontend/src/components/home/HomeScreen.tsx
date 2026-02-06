@@ -2,9 +2,16 @@ import React, { useState, useEffect, useCallback } from "react";
 import { MainLayout } from "../layout/MainLayout";
 import { useGame } from "../../state/GameContext";
 import { createRoom, joinRoom, queueMatch, cancelQueue } from "../../services/gameApi";
-import { useAuth } from "../../state/AuthContext";
 
 const MATCHMAKING_TIMEOUT_MS = 60_000;
+
+const MENU_COLORS = {
+  darkGreen: "#1E3D2F",
+  orange: "#D97A1F",
+  brown: "#7C5C20"
+};
+
+type OnlineStep = "options" | "create" | "join" | "random";
 
 export const HomeScreen: React.FC = () => {
   const {
@@ -20,15 +27,14 @@ export const HomeScreen: React.FC = () => {
     setPlayerId,
     effectivePlayerName
   } = useGame();
-  const { user, logout } = useAuth();
   const [roomInput, setRoomInput] = useState("");
   const [loadingAction, setLoadingAction] = useState<"create" | "join" | "play" | null>(null);
   const [matchmakingTimeout, setMatchmakingTimeout] = useState(false);
+  const [playOnlineOpen, setPlayOnlineOpen] = useState(false);
+  const [onlineStep, setOnlineStep] = useState<OnlineStep>("options");
 
   const handleCancelSearch = useCallback(() => {
-    if (socket) {
-      cancelQueue(socket);
-    }
+    if (socket) cancelQueue(socket);
     setMatchmaking(false);
     setScreen("home");
     setRoomCode(null);
@@ -42,22 +48,28 @@ export const HomeScreen: React.FC = () => {
       setMatchmakingTimeout(false);
       return;
     }
-    const timer = window.setTimeout(() => {
-      setMatchmakingTimeout(true);
-    }, MATCHMAKING_TIMEOUT_MS);
+    const timer = window.setTimeout(() => setMatchmakingTimeout(true), MATCHMAKING_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
   }, [matchmaking]);
 
   useEffect(() => {
     if (!matchmaking) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        handleCancelSearch();
-      }
+      if (e.key === "Escape") handleCancelSearch();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [matchmaking, handleCancelSearch]);
+
+  const openPlayOnline = () => {
+    setPlayOnlineOpen(true);
+    setOnlineStep("options");
+  };
+
+  const closePlayOnline = () => {
+    setPlayOnlineOpen(false);
+    setOnlineStep("options");
+  };
 
   const handleCreateRoom = async () => {
     if (!socket) {
@@ -95,7 +107,6 @@ export const HomeScreen: React.FC = () => {
     if (response.ok && response.roomCode && response.playerId) {
       setRoomCode(response.roomCode);
       if (response.playerId) setPlayerId(response.playerId);
-      // Do NOT setScreen("placement") here — both host and guest navigate via room:ready from server
     } else {
       alert(response.error || "Failed to join room");
     }
@@ -120,180 +131,233 @@ export const HomeScreen: React.FC = () => {
     setLoadingAction(null);
   };
 
+  const inputStyle: React.CSSProperties = {
+    borderColor: "rgba(30,61,47,0.28)",
+    color: MENU_COLORS.darkGreen,
+    backgroundColor: "rgba(30,61,47,0.06)"
+  };
+
+  const subButtonClass =
+    "w-full rounded-2xl px-4 py-2.5 text-sm font-medium transition-all shadow-sm hover:shadow hover:opacity-95 disabled:opacity-60 disabled:cursor-not-allowed text-white";
+  const subButtonStyle = { backgroundColor: MENU_COLORS.brown };
+
   return (
-    <MainLayout>
-      <div className="space-y-8">
-        {/* Auth shortcuts – optional in Phase 1 */}
-        <div className="flex items-center justify-between gap-3">
-          {user ? (
-            <>
-              <div className="text-xs text-text-main/70">
-                Signed in as{" "}
-                <span className="font-semibold text-text-main">
-                  {user.username}
-                </span>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setScreen("history")}
-                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
-                >
-                  View History
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScreen("stats")}
-                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
-                >
-                  My Stats
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScreen("leaderboard")}
-                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
-                >
-                  Global Ranking
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScreen("profile")}
-                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
-                >
-                  My profile
-                </button>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
-                >
-                  Log out
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-xs text-text-main/70">
-                You are playing in anonymous mode.
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setScreen("login")}
-                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
-                >
-                  Log in
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScreen("register")}
-                  className="rounded-full border border-grid-deep/20 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-text-main hover:bg-grid-deep/5 transition-colors"
-                >
-                  Register
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Player Name Input */}
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-text-main/70 uppercase tracking-wide">
-            Player Name
-          </label>
-          <input
-            type="text"
-            placeholder="Enter your name"
-            maxLength={20}
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            className="w-full rounded-full border border-grid-deep/20 bg-white/80 px-5 py-3 text-sm text-text-main outline-none transition-all duration-200 placeholder:text-text-main/40 hover:border-grid-deep/30 hover:bg-white focus:border-accent-primary focus:bg-white focus:ring-2 focus:ring-accent-primary/20"
-          />
-        </div>
-
-        {/* Create New Room Button - Orange #D97706 */}
-        <div>
-          <button
-            onClick={handleCreateRoom}
-            disabled={loadingAction === "create" || matchmaking}
-            className="w-full rounded-full bg-[#D97706] text-white px-6 py-3 text-sm font-medium tracking-wide uppercase transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-md hover:scale-[1.02] hover:bg-[#E07B0A] active:translate-y-0 active:scale-100 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100"
-          >
-            {loadingAction === "create" ? "Creating room..." : "CREATE NEW ROOM"}
-          </button>
-        </div>
-
-        {/* Join Room */}
+    <MainLayout isHome>
+      <div className="space-y-5">
+        {/* 1) PLAY ONLINE – one main button; expands to sub-options only (no name/room on main) */}
         <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Enter room code"
-            value={roomInput}
-            onChange={(e) => setRoomInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-            maxLength={6}
-            className="w-full rounded-full border border-grid-deep/20 bg-white/80 px-5 py-3 text-sm text-text-main outline-none transition-all duration-200 placeholder:text-text-main/40 hover:border-grid-deep/30 hover:bg-white focus:border-accent-primary focus:bg-white focus:ring-2 focus:ring-accent-primary/20"
-          />
-          <button
-            onClick={handleJoinRoom}
-            disabled={!roomInput.trim() || loadingAction === "join" || matchmaking}
-            className="w-full rounded-full bg-[#8B6F47] text-white px-6 py-3 text-sm font-medium tracking-wide uppercase transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-md hover:scale-[1.02] hover:bg-[#9B7F57] active:translate-y-0 active:scale-100 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100"
-          >
-            {loadingAction === "join" ? "Joining..." : "JOIN ROOM"}
-          </button>
-        </div>
-
-        {/* Play vs Computer - local AI, no login required */}
-        <div>
           <button
             type="button"
-            onClick={() => setScreen("ai_placement")}
-            className="w-full rounded-full bg-[#2A523F] text-[#FFFFFF] px-6 py-3 text-sm font-medium tracking-wide uppercase transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-md hover:scale-[1.02] hover:bg-[#355d4a] active:translate-y-0 active:scale-100 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100"
+            onClick={() => (playOnlineOpen ? closePlayOnline() : openPlayOnline())}
+            className="btn-orange-sparkle w-full rounded-3xl px-6 py-5 text-lg font-medium tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl hover:opacity-95 text-white relative"
+            style={{ backgroundColor: MENU_COLORS.orange, fontFamily: "'Source Sans 3', sans-serif" }}
           >
-            Play vs Computer
-          </button>
-        </div>
-
-        {/* Play Online - Deep green #1E3D2F, hover #2A523F */}
-        <div className="pt-6 border-t border-grid-deep/10 space-y-3">
-          <button
-            onClick={handlePlayOnline}
-            disabled={matchmaking || loadingAction === "play"}
-            className="w-full rounded-full bg-[#1E3D2F] text-[#FFFFFF] px-6 py-3 text-sm font-medium tracking-wide uppercase transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-md hover:scale-[1.02] hover:bg-[#2A523F] active:translate-y-0 active:scale-100 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100"
-          >
-            {matchmaking || loadingAction === "play" ? "Searching for opponent…" : "PLAY ONLINE"}
+            <span className="sparkle-dot" style={{ top: "20%", left: "10%", animationDelay: "0s" }} />
+            <span className="sparkle-dot" style={{ top: "65%", left: "88%", animationDelay: "1.6s" }} />
+            <span className="sparkle-dot" style={{ top: "35%", right: "15%", left: "auto", animationDelay: "2.6s" }} />
+            <span className="sparkle-dot" style={{ bottom: "25%", left: "18%", top: "auto", animationDelay: "0.5s" }} />
+            Play Online
           </button>
 
-          {/* Matchmaking UI: indicator, messages, timeout, cancel */}
-          {matchmaking && (
-            <div className="space-y-3 rounded-2xl border border-grid-deep/20 bg-background/60 px-4 py-4">
-              <div className="flex items-center justify-center gap-2">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-accent-primary/80 animate-pulse" style={{ animationDelay: "0ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-accent-primary/80 animate-pulse" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-accent-primary/80 animate-pulse" style={{ animationDelay: "300ms" }} />
-                </div>
-                <span className="text-sm text-text-main/80">Searching for opponent…</span>
-              </div>
-              <p className="text-xs text-text-main/60 text-center">
-                Waiting for another online player…
-              </p>
-              {matchmakingTimeout && (
-                <p className="text-xs text-amber-700/90 text-center font-medium">
-                  No players available at the moment. Try again later.
-                </p>
+          {playOnlineOpen && (
+            <div
+              className="rounded-2xl p-4 space-y-4"
+              style={{ borderWidth: 2, borderColor: "rgba(124,92,32,0.25)", borderStyle: "solid" }}
+            >
+              {onlineStep === "options" && (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOnlineStep("create")}
+                      disabled={matchmaking}
+                      className={subButtonClass}
+                      style={subButtonStyle}
+                    >
+                      Create room
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOnlineStep("join")}
+                      disabled={matchmaking}
+                      className={subButtonClass}
+                      style={subButtonStyle}
+                    >
+                      Join room
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOnlineStep("random")}
+                      disabled={matchmaking || loadingAction === "play"}
+                      className={subButtonClass}
+                      style={subButtonStyle}
+                    >
+                      {matchmaking || loadingAction === "play" ? "Searching…" : "Find random match"}
+                    </button>
+                  </div>
+                  {matchmaking && (
+                    <div className="rounded-2xl p-4 space-y-3" style={{ borderWidth: 1, borderColor: "rgba(30,61,47,0.12)", borderStyle: "solid" }}>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="w-2 h-2 rounded-full animate-pulse bg-[#D97A1F]" />
+                        <span className="w-2 h-2 rounded-full animate-pulse bg-[#D97A1F]" style={{ animationDelay: "150ms" }} />
+                        <span className="w-2 h-2 rounded-full animate-pulse bg-[#D97A1F]" style={{ animationDelay: "300ms" }} />
+                        <span className="text-sm opacity-80" style={{ color: MENU_COLORS.darkGreen }}>Searching…</span>
+                      </div>
+                      {matchmakingTimeout && (
+                        <p className="text-xs text-center opacity-90" style={{ color: MENU_COLORS.darkGreen }}>No players available. Try again later.</p>
+                      )}
+                      <button type="button" onClick={handleCancelSearch} className={subButtonClass} style={subButtonStyle}>
+                        Cancel search
+                      </button>
+                      <p className="text-xs text-center opacity-70" style={{ color: MENU_COLORS.darkGreen }}>Press ESC to cancel</p>
+                    </div>
+                  )}
+                </>
               )}
-              <button
-                type="button"
-                onClick={handleCancelSearch}
-                className="w-full rounded-full bg-[#8B6F47] text-white px-6 py-3 text-sm font-medium tracking-wide uppercase transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-md hover:scale-[1.02] hover:bg-[#9B7F57] active:translate-y-0 active:scale-100"
-              >
-                CANCEL SEARCH
-              </button>
-              <p className="text-xs text-text-main/50 text-center">
-                Press ESC to cancel
-              </p>
+
+              {onlineStep === "create" && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wide opacity-90" style={{ color: MENU_COLORS.darkGreen }}>
+                      Player name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter your name"
+                      maxLength={20}
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      className="w-full rounded-xl border-2 px-4 py-3 text-sm outline-none placeholder:opacity-60"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setOnlineStep("options")} className="rounded-2xl px-4 py-2.5 text-sm font-medium opacity-90" style={{ color: MENU_COLORS.darkGreen }}>
+                      Back
+                    </button>
+                    <button type="button" onClick={handleCreateRoom} disabled={loadingAction === "create"} className={`flex-1 ${subButtonClass}`} style={subButtonStyle}>
+                      {loadingAction === "create" ? "Creating room…" : "Create room"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {onlineStep === "join" && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wide opacity-90" style={{ color: MENU_COLORS.darkGreen }}>
+                      Room code
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ABC123"
+                      value={roomInput}
+                      onChange={(e) => setRoomInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                      maxLength={6}
+                      className="w-full rounded-xl border-2 px-4 py-2.5 text-sm outline-none"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wide opacity-90" style={{ color: MENU_COLORS.darkGreen }}>
+                      Player name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter your name"
+                      maxLength={20}
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      className="w-full rounded-xl border-2 px-4 py-3 text-sm outline-none placeholder:opacity-60"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setOnlineStep("options")} className="rounded-2xl px-4 py-2.5 text-sm font-medium opacity-90" style={{ color: MENU_COLORS.darkGreen }}>
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleJoinRoom}
+                      disabled={!roomInput.trim() || loadingAction === "join"}
+                      className={`flex-1 ${subButtonClass}`}
+                      style={subButtonStyle}
+                    >
+                      {loadingAction === "join" ? "Joining…" : "Join room"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {onlineStep === "random" && (
+                <>
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold uppercase tracking-wide opacity-90" style={{ color: MENU_COLORS.darkGreen }}>
+                        Player name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your name"
+                        maxLength={20}
+                        value={playerName}
+                        onChange={(e) => setPlayerName(e.target.value)}
+                        className="w-full rounded-xl border-2 px-4 py-3 text-sm outline-none placeholder:opacity-60"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setOnlineStep("options")} className="rounded-2xl px-4 py-2.5 text-sm font-medium opacity-90" style={{ color: MENU_COLORS.darkGreen }}>
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePlayOnline}
+                        disabled={matchmaking || loadingAction === "play"}
+                        className={`flex-1 ${subButtonClass}`}
+                        style={subButtonStyle}
+                      >
+                        {matchmaking || loadingAction === "play" ? "Searching…" : "Find random match"}
+                      </button>
+                    </div>
+                  </div>
+                  {matchmaking && (
+                    <div className="rounded-2xl p-4 space-y-3" style={{ borderWidth: 1, borderColor: "rgba(30,61,47,0.12)", borderStyle: "solid" }}>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="w-2 h-2 rounded-full animate-pulse bg-[#D97A1F]" />
+                        <span className="w-2 h-2 rounded-full animate-pulse bg-[#D97A1F]" style={{ animationDelay: "150ms" }} />
+                        <span className="w-2 h-2 rounded-full animate-pulse bg-[#D97A1F]" style={{ animationDelay: "300ms" }} />
+                        <span className="text-sm opacity-80" style={{ color: MENU_COLORS.darkGreen }}>Searching…</span>
+                      </div>
+                      {matchmakingTimeout && (
+                        <p className="text-xs text-center opacity-90" style={{ color: MENU_COLORS.darkGreen }}>No players available. Try again later.</p>
+                      )}
+                      <button type="button" onClick={handleCancelSearch} className={subButtonClass} style={subButtonStyle}>
+                        Cancel search
+                      </button>
+                      <p className="text-xs text-center opacity-70" style={{ color: MENU_COLORS.darkGreen }}>Press ESC to cancel</p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>
+
+        {/* 2) PLAY VS COMPUTER – single main button with sparkle */}
+        <button
+          type="button"
+          onClick={() => setScreen("ai_placement")}
+          className="btn-dark-green-sparkle w-full rounded-3xl px-6 py-5 text-lg font-semibold tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl hover:opacity-95 text-white relative"
+          style={{ backgroundColor: MENU_COLORS.darkGreen, fontFamily: "'Source Sans 3', sans-serif" }}
+        >
+          <span className="sparkle-dot" style={{ top: "22%", left: "12%", animationDelay: "0s" }} />
+          <span className="sparkle-dot" style={{ top: "68%", left: "82%", animationDelay: "1.5s" }} />
+          <span className="sparkle-dot" style={{ top: "35%", right: "18%", left: "auto", animationDelay: "2.8s" }} />
+          <span className="sparkle-dot" style={{ bottom: "28%", left: "22%", top: "auto", animationDelay: "0.6s" }} />
+          <span className="sparkle-dot" style={{ top: "50%", left: "75%", animationDelay: "2s" }} />
+          Play vs Computer
+        </button>
       </div>
     </MainLayout>
   );

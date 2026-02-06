@@ -4,10 +4,10 @@
  * and sunk-cell animation in CSS. No hardcoded hex values in components.
  */
 export const GAME_COLORS = {
-  /** Base ship color (boards + fleet legend) */
-  ship: "#D4A373",
-  /** Hit cell (same on player board, opponent board, legend) */
-  hit: "#e08a3d",
+  /** Base ship color (boards + fleet legend) - NARANJA (#D76F2A) */
+  ship: "#D76F2A",
+  /** Hit cell (same on player board, opponent board, legend) - NARANJA (#D76F2A) */
+  hit: "#D76F2A",
   /** Hit cell text/icon (e.g. white dot) */
   hitText: "#ffffff",
   /** Miss cell background */
@@ -18,8 +18,8 @@ export const GAME_COLORS = {
   missDot: "rgba(14, 165, 233, 0.4)",
   /** Miss dot border */
   missDotBorder: "rgba(14, 165, 233, 0.3)",
-  /** Sunk ship (boards + fleet legend; unified) */
-  sunk: "#3E2F20",
+  /** Sunk ship (boards + fleet legend; unified) - VERDE OSCURO (#1E4D2B) */
+  sunk: "#1E4D2B",
   /** Sunk cell border */
   sunkBorder: "#44403c",
   /** Sunk cell text/icon */

@@ -17,6 +17,7 @@ import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { AiPlacementScreen } from "./screens/AiPlacementScreen";
 import { AiGameScreen } from "./screens/AiGameScreen";
 import { AiResultScreen } from "./screens/AiResultScreen";
+import { SoundManager } from "./components/audio/SoundManager";
 
 export const App: React.FC = () => {
   const { screen } = useGame();
@@ -25,19 +26,27 @@ export const App: React.FC = () => {
     preloadGameSounds();
   }, []);
 
-  if (screen === "waiting") return <WaitingRoom />;
-  if (screen === "placement") return <ShipPlacementScreen />;
-  if (screen === "game") return <GameScreen />;
-  if (screen === "result") return <GameResultScreen />;
-  if (screen === "ai_placement") return <AiPlacementScreen />;
-  if (screen === "ai_game") return <AiGameScreen />;
-  if (screen === "ai_result") return <AiResultScreen />;
-  if (screen === "login") return <LoginScreen />;
-  if (screen === "register") return <RegisterScreen />;
-  if (screen === "profile") return <ProfileScreen />;
-  if (screen === "history") return <HistoryScreen />;
-  if (screen === "stats") return <StatsScreen />;
-  if (screen === "leaderboard") return <LeaderboardScreen />;
+  let content: JSX.Element;
 
-  return <HomeScreen />;
+  if (screen === "waiting") content = <WaitingRoom />;
+  else if (screen === "placement") content = <ShipPlacementScreen />;
+  else if (screen === "game") content = <GameScreen />;
+  else if (screen === "result") content = <GameResultScreen />;
+  else if (screen === "ai_placement") content = <AiPlacementScreen />;
+  else if (screen === "ai_game") content = <AiGameScreen />;
+  else if (screen === "ai_result") content = <AiResultScreen />;
+  else if (screen === "login") content = <LoginScreen />;
+  else if (screen === "register") content = <RegisterScreen />;
+  else if (screen === "profile") content = <ProfileScreen />;
+  else if (screen === "history") content = <HistoryScreen />;
+  else if (screen === "stats") content = <StatsScreen />;
+  else if (screen === "leaderboard") content = <LeaderboardScreen />;
+  else content = <HomeScreen />;
+
+  return (
+    <>
+      <SoundManager />
+      {content}
+    </>
+  );
 };
